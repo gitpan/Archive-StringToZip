@@ -2,12 +2,12 @@
 #
 # Test Archive::StringToZip as documented
 #
-# $Id: zipString.t 6 2006-05-20 11:33:28Z root $
+# $Id: zipString.t 10 2006-05-22 18:21:21Z tom $
 
 use strict;
 
 use Test::Exception;
-use Test::More tests => 8;
+use Test::More tests => 14;
 
 my $class = 'Archive::StringToZip';
 use_ok $class;
@@ -24,7 +24,14 @@ END
     throws_ok   { $stz->zipString() }
                     qr/\ACannot archive an undefined string/,
                     'zipString dies with no arguments';
+    throws_ok   { $stz->zipString(undef, 'FILENAME') }
+                    qr/\ACannot archive an undefined string/,
+                    'zipString dies with a filename but no string';
+    lives_ok    { $stz->zipString('') }
+                    'Can archive an empty string';
 }
+
+# Use the OO interface
 {
     my $stz     = $class->new();
     my $zip     = $stz->zipString($unzipped_text, 'output.file_TEST');
@@ -42,4 +49,22 @@ END
                     'Looks like a ZIP when reusing an object';
     like        $zip2, qr/file\.txt/,
                     'Not specifying the filename probably works';
+}
+
+# Test non-OO interface
+{
+    throws_ok { zipString($unzipped_text, 'myFILENAME') }
+        qr/\AUndefined subroutine /ms,
+        'Cannot call zipString without importing it';
+    $class->import('zipString');
+    my $zip     = zipString($unzipped_text, 'myFILENAME');
+    is          substr($zip, 0, 2), 'PK',
+                    'Looks like a ZIP';
+    like        $zip, qr/myFILENAME/,
+                    'Specifying the filename probably works';
+
+    no strict 'refs';   # needed for the line below
+    my $zip2    = &{"$class\::zipString"}($unzipped_text, 'myFILENAME');
+    is          $zip, $zip2,
+                'Fully qualified name behaves the same as imported name';
 }

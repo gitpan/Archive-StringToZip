@@ -6,6 +6,7 @@ README
 lib/Archive/StringToZip.pm
 t/00-load.t
 t/boilerplate.t
+t/changes_version.t
 t/pod-coverage.t
 t/pod.t
 t/zipString.t

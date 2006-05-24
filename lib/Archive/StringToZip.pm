@@ -4,7 +4,7 @@ use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION);
 
 use Carp qw(croak);
-use IO::Scalar;
+use IO::String ();
 use Archive::Zip qw(:ERROR_CODES :CONSTANTS);
 use base qw(Archive::Zip);
 
@@ -13,17 +13,16 @@ require Exporter;
 @EXPORT_OK = qw(zipString);
 
 
-$VERSION = '1.00';
+$VERSION = '1.01';
 
 sub zipString {
-    my $self = ref($_[0]) ? shift : __PACKAGE__;
+    my $self = ref($_[0]) ? shift : __PACKAGE__->new();
     my ($string, $filename) = @_;
 
     croak 'Cannot archive an undefined string' unless defined $string;
     $filename = 'file.txt' unless $filename;
 
-    my $zipContents = '';
-    my $SH = IO::Scalar->new( \$zipContents );
+    my $SH = IO::String->new();
     
     my $member = $self->addString($string, $filename);
     $member->desiredCompressionMethod(COMPRESSION_DEFLATED);
@@ -33,7 +32,8 @@ sub zipString {
     die $! if $status != AZ_OK;
 
     binmode STDOUT;     # necessary for Win32 and does no harm on *nix
-    return $zipContents;
+    $SH->setpos(0);
+    return do { local $/ = undef; $SH->getline };
 }
 
 1;
@@ -97,30 +97,34 @@ or even
 
 =item new
 
-Archive::StringToZip->new();
+ my $stz = Archive::StringToZip->new();
 
 Constructs a new string zipping object
 
 =item zipString
 
-Archive::StringToZip->new($string,$filename);
+ my $zip_content = $stz->zipString($string, $filename);
+
+or
+
+ my $zip_content = zipString($string, $filename);
 
 First argument is compulsory; second is optional. The default filename
-is "file.txt" if the second argument is undefined.
+is F<file.txt> if the second argument is undefined.
 
-Converts a string ($string) into a file ($filename) in a compressed
-zip file format which is returned as a filehandle. 
+Converts a string (C<$string>) into a file (C<$filename>) in a compressed
+zip file format which is returned as a string. 
 
 Returns a false value on failure.
 
-Sets binmode STDOUT by default to help prevent Win32 systems being
+Sets C<binmode STDOUT> by default to help prevent Win32 systems being
 confused about your output.
 
 =back
 
 =head1 DEPENDENCIES
 
-L<Archive::Zip> and L<IO::Scalar>.
+L<Archive::Zip> and L<IO::String>.
 
 =head1 MOTIVATION
 
@@ -142,6 +146,10 @@ C<bug-archive-stringtozip at rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Archive-StringToZip>.
 I will be notified, and then you'll automatically be notified of
 progress on your bug as I make changes.
+
+=head1 ALTERNATIVES
+
+L<IO::Compress::Zip>, unstable at the time of writing.
 
 =head1 LICENSE
 
